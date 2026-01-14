@@ -8,6 +8,11 @@ export default function Home() {
   const [results, setResults] = useState<Motorcycle[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Filter states
+  const [maxPrice, setMaxPrice] = useState<number>(30000);
+  const [selectedType, setSelectedType] = useState<string>('All');
+  const [onlyTopcase, setOnlyTopcase] = useState<boolean>(false);
+
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
@@ -26,6 +31,13 @@ export default function Home() {
     }
   };
 
+  const filteredResults = results.filter(moto => {
+    const matchesPrice = moto.priceValue <= maxPrice;
+    const matchesType = selectedType === 'All' || moto.type === selectedType;
+    const matchesTopcase = !onlyTopcase || moto.hasTopcase;
+    return matchesPrice && matchesType && matchesTopcase;
+  });
+
   return (
     <main>
       <header>
@@ -34,16 +46,54 @@ export default function Home() {
       </header>
 
       <div className="search-container">
-        <form onSubmit={handleSearch} style={{ display: 'flex', width: '100%', gap: '1rem' }}>
-          <input
-            type="text"
-            placeholder="Search e.g. Honda CB500X, Yamaha R6..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <button type="submit" className="search-btn" disabled={loading}>
-            {loading ? 'Searching...' : 'Search'}
-          </button>
+        <form onSubmit={handleSearch} style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: '1rem' }}>
+          <div className="search-input-wrapper">
+            <input
+              type="text"
+              placeholder="Search e.g. Honda CB500X, Yamaha R6..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            <button type="submit" className="search-btn" disabled={loading}>
+              {loading ? 'Searching...' : 'Search'}
+            </button>
+          </div>
+
+          <div className="filters">
+            <div className="filter-group">
+              <label>Max Price: {maxPrice}€</label>
+              <input
+                type="range"
+                min="0"
+                max="30000"
+                step="500"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(parseInt(e.target.value))}
+              />
+            </div>
+
+            <div className="filter-group">
+              <label>Type</label>
+              <select value={selectedType} onChange={(e) => setSelectedType(e.target.value)}>
+                <option value="All">All Types</option>
+                <option value="Naked">Naked</option>
+                <option value="Sport">Sport</option>
+                <option value="Trail">Trail</option>
+                <option value="Custom">Custom</option>
+                <option value="Scooter">Scooter</option>
+              </select>
+            </div>
+
+            <div className="filter-group-row">
+              <input
+                type="checkbox"
+                id="topcase"
+                checked={onlyTopcase}
+                onChange={(e) => setOnlyTopcase(e.target.checked)}
+              />
+              <label htmlFor="topcase">Has Topcase</label>
+            </div>
+          </div>
         </form>
       </div>
 
@@ -55,24 +105,33 @@ export default function Home() {
       )}
 
       <div className="results-grid">
-        {!loading && results.map((moto) => (
+        {!loading && filteredResults.map((moto) => (
           <a key={moto.id} href={moto.link} target="_blank" rel="noopener noreferrer" className="card">
             {moto.image && (
               <img src={moto.image} alt={moto.title} className="card-img" />
             )}
             <div className="card-content">
-              <h2 className="card-title">{moto.title}</h2>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <h2 className="card-title">{moto.title}</h2>
+                <span className={`source-badge ${moto.source.replace('.', '-')}`}>{moto.source}</span>
+              </div>
               <div className="card-price">{moto.price}</div>
               <div className="card-details">
                 <span className="badge">{moto.year}</span>
                 <span className="badge">{moto.km}</span>
                 <span className="badge">{moto.location}</span>
-                <span className="badge">Motos.net</span>
+                {moto.hasTopcase && <span className="badge topcase-badge">🧳 Topcase</span>}
               </div>
             </div>
           </a>
         ))}
       </div>
+
+      {!loading && filteredResults.length === 0 && results.length > 0 && (
+        <div className="loading">
+          <p>No results match your filters.</p>
+        </div>
+      )}
 
       {!loading && results.length === 0 && query && (
         <div className="loading">

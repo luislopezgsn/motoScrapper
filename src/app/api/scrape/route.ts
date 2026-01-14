@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { scrapeMotos } from '@/lib/scraper';
+import { scrapeAll } from '@/lib/scraper';
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     }
 
     try {
-        const results = await scrapeMotos(q);
+        const results = await scrapeAll(q);
         return NextResponse.json(results);
     } catch (error) {
         console.error('API Error:', error);

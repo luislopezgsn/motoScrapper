@@ -55,15 +55,75 @@ h1 {
 
 .search-container {
   display: flex;
-  gap: 1rem;
-  max-width: 600px;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 800px;
   margin: 0 auto 4rem;
-  padding: 0.5rem;
+  padding: 1.5rem;
   background: var(--card);
   border: 1px solid var(--card-border);
-  border-radius: 100px;
+  border-radius: 24px;
   backdrop-filter: blur(12px);
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.search-input-wrapper {
+  display: flex;
+  gap: 1rem;
+  background: var(--input-bg);
+  border-radius: 100px;
+  padding: 0.25rem;
+  border: 1px solid var(--card-border);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  padding: 0 0.5rem;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 150px;
+}
+
+.filter-group label {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.filter-group-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+}
+
+.filter-group-row input[type="checkbox"] {
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--accent);
+}
+
+select {
+  background: var(--input-bg);
+  border: 1px solid var(--card-border);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"] {
+  accent-color: var(--accent);
+  cursor: pointer;
 }
 
 input {
@@ -161,6 +221,45 @@ button.search-btn:active {
   border-radius: 8px;
   font-size: 0.85rem;
   color: #94a3b8;
+}
+
+.topcase-badge {
+  background: rgba(56, 189, 248, 0.1);
+  color: var(--accent);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+}
+
+.source-badge {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.motos-net {
+  background: #ff4e00;
+  color: white;
+}
+
+.wallapop {
+  background: #13c1ac;
+  color: white;
+}
+
+.ebay {
+  background: #e53238;
+  color: white;
+}
+
+.milanuncios {
+  background: #2d81ff;
+  color: white;
+}
+
+.facebook {
+  background: #1877f2;
+  color: white;
 }
 
 .loading {
