@@ -11,6 +11,7 @@ export default function Home() {
   // Filter states
   const [maxPrice, setMaxPrice] = useState<number>(30000);
   const [selectedType, setSelectedType] = useState<string>('All');
+  const [selectedBrand, setSelectedBrand] = useState<string>('All');
   const [onlyTopcase, setOnlyTopcase] = useState<boolean>(false);
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -34,8 +35,9 @@ export default function Home() {
   const filteredResults = results.filter(moto => {
     const matchesPrice = moto.priceValue <= maxPrice;
     const matchesType = selectedType === 'All' || moto.type === selectedType;
+    const matchesBrand = selectedBrand === 'All' || moto.brand === selectedBrand;
     const matchesTopcase = !onlyTopcase || moto.hasTopcase;
-    return matchesPrice && matchesType && matchesTopcase;
+    return matchesPrice && matchesType && matchesBrand && matchesTopcase;
   });
 
   return (
@@ -70,6 +72,28 @@ export default function Home() {
                 value={maxPrice}
                 onChange={(e) => setMaxPrice(parseInt(e.target.value))}
               />
+            </div>
+
+            <div className="filter-group">
+              <label>Brand</label>
+              <select value={selectedBrand} onChange={(e) => setSelectedBrand(e.target.value)}>
+                <option value="All">All Brands</option>
+                <option value="Honda">Honda</option>
+                <option value="Yamaha">Yamaha</option>
+                <option value="Kawasaki">Kawasaki</option>
+                <option value="Suzuki">Suzuki</option>
+                <option value="BMW">BMW</option>
+                <option value="KTM">KTM</option>
+                <option value="Ducati">Ducati</option>
+                <option value="Triumph">Triumph</option>
+                <option value="Harley-Davidson">Harley-Davidson</option>
+                <option value="Piaggio">Piaggio</option>
+                <option value="Kymco">Kymco</option>
+                <option value="SYM">SYM</option>
+                <option value="Aprilia">Aprilia</option>
+                <option value="Benelli">Benelli</option>
+                <option value="Other">Other</option>
+              </select>
             </div>
 
             <div className="filter-group">

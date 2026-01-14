@@ -11,6 +11,7 @@ export interface Motorcycle {
   link: string;
   image?: string;
   source: string;
+  brand: string;
   type?: string;
   hasTopcase: boolean;
 }
@@ -34,14 +35,33 @@ export async function scrapeAll(searchQuery: string): Promise<Motorcycle[]> {
   return results.sort((a, b) => a.priceValue - b.priceValue);
 }
 
+function detectBrand(title: string): string {
+  const t = title.toLowerCase();
+  if (t.includes('honda')) return 'Honda';
+  if (t.includes('yamaha')) return 'Yamaha';
+  if (t.includes('kawasaki')) return 'Kawasaki';
+  if (t.includes('suzuki')) return 'Suzuki';
+  if (t.includes('bmw')) return 'BMW';
+  if (t.includes('ktm')) return 'KTM';
+  if (t.includes('ducati')) return 'Ducati';
+  if (t.includes('triumph')) return 'Triumph';
+  if (t.includes('harley')) return 'Harley-Davidson';
+  if (t.includes('piaggio')) return 'Piaggio';
+  if (t.includes('kymco')) return 'Kymco';
+  if (t.includes('sym')) return 'SYM';
+  if (t.includes('aprilia')) return 'Aprilia';
+  if (t.includes('benelli')) return 'Benelli';
+  return 'Other';
+}
+
 function detectType(title: string): string {
   const t = title.toLowerCase();
-  if (t.includes('naked') || t.includes('z900') || t.includes('mt-07') || t.includes('cb500f')) return 'Naked';
-  if (t.includes('sport') || t.includes('r6') || t.includes('r1') || t.includes('cbr')) return 'Sport';
-  if (t.includes('trail') || t.includes('adventure') || t.includes('gs') || t.includes('africa twin')) return 'Trail';
-  if (t.includes('custom') || t.includes('harley') || t.includes('bobber')) return 'Custom';
-  if (t.includes('scooter') || t.includes('tmax') || t.includes('x-max') || t.includes('honda sh')) return 'Scooter';
-  return 'Naked'; // Default or most common
+  if (t.includes('naked') || t.includes('z900') || t.includes('mt-07') || t.includes('cb500f') || t.includes('hornet')) return 'Naked';
+  if (t.includes('sport') || t.includes('r6') || t.includes('r1') || t.includes('cbr') || t.includes('ninja') || t.includes('gsxr')) return 'Sport';
+  if (t.includes('trail') || t.includes('adventure') || t.includes('gs') || t.includes('africa twin') || t.includes('v-strom') || t.includes('tenere')) return 'Trail';
+  if (t.includes('custom') || t.includes('harley') || t.includes('bobber') || t.includes('chopper') || t.includes('vulcan')) return 'Custom';
+  if (t.includes('scooter') || t.includes('tmax') || t.includes('x-max') || t.includes('honda sh') || t.includes('vespa') || t.includes('pcx')) return 'Scooter';
+  return 'Naked';
 }
 
 export async function scrapeMotos(searchQuery: string): Promise<Motorcycle[]> {
@@ -62,7 +82,7 @@ export async function scrapeMotos(searchQuery: string): Promise<Motorcycle[]> {
 
     await page.waitForSelector('.mt-CardAd', { timeout: 10000 });
 
-    const motorcycles: Motorcycle[] = await page.evaluate((searchQuery) => {
+    const motorcycles: Motorcycle[] = await page.evaluate(() => {
       const cards = Array.from(document.querySelectorAll('.mt-CardAd'));
 
       return cards.map((card, index) => {
@@ -102,12 +122,17 @@ export async function scrapeMotos(searchQuery: string): Promise<Motorcycle[]> {
           image: imageEl?.src || '',
           source: 'motos.net',
           hasTopcase,
+          brand: '', // Will be post-processed
           type: 'Naked' // Will be post-processed
         };
       });
-    }, searchQuery);
+    });
 
-    return motorcycles.map(m => ({ ...m, type: detectType(m.title) }));
+    return motorcycles.map(m => ({
+      ...m,
+      brand: detectBrand(m.title),
+      type: detectType(m.title)
+    }));
   } catch (error) {
     console.error('Motos.net scraping failed:', error);
     return [];
@@ -163,12 +188,17 @@ export async function scrapeWallapop(searchQuery: string): Promise<Motorcycle[]>
           image: imageEl?.src || '',
           source: 'wallapop',
           hasTopcase,
+          brand: '',
           type: 'Naked'
         };
       });
     });
 
-    return motorcycles.map(m => ({ ...m, type: detectType(m.title) }));
+    return motorcycles.map(m => ({
+      ...m,
+      brand: detectBrand(m.title),
+      type: detectType(m.title)
+    }));
   } catch (error) {
     console.error('Wallapop scraping failed:', error);
     return [];
@@ -213,12 +243,17 @@ export async function scrapeEbay(searchQuery: string): Promise<Motorcycle[]> {
           image: imageEl?.src || '',
           source: 'ebay',
           hasTopcase,
+          brand: '',
           type: 'Naked'
         };
       });
     });
 
-    return motorcycles.map(m => ({ ...m, type: detectType(m.title) }));
+    return motorcycles.map(m => ({
+      ...m,
+      brand: detectBrand(m.title),
+      type: detectType(m.title)
+    }));
   } catch (error) {
     console.error('eBay scraping failed:', error);
     return [];
@@ -274,12 +309,17 @@ export async function scrapeMilanuncios(searchQuery: string): Promise<Motorcycle
           image: imageEl?.src || '',
           source: 'milanuncios',
           hasTopcase,
+          brand: '',
           type: 'Naked'
         };
       });
     });
 
-    return motorcycles.map(m => ({ ...m, type: detectType(m.title) }));
+    return motorcycles.map(m => ({
+      ...m,
+      brand: detectBrand(m.title),
+      type: detectType(m.title)
+    }));
   } catch (error) {
     console.error('Milanuncios scraping failed:', error);
     return [];
@@ -339,12 +379,17 @@ export async function scrapeFacebookMarketplace(searchQuery: string): Promise<Mo
           image: imageEl?.src || '',
           source: 'facebook',
           hasTopcase,
+          brand: '',
           type: 'Naked'
         };
       }).filter(item => item !== null && item.link !== '') as Motorcycle[];
     });
 
-    return motorcycles.map(m => ({ ...m, type: detectType(m.title) }));
+    return motorcycles.map(m => ({
+      ...m,
+      brand: detectBrand(m.title),
+      type: detectType(m.title)
+    }));
   } catch (error) {
     console.error('Facebook Marketplace scraping failed:', error);
     return [];
