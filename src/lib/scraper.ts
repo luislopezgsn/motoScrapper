@@ -73,11 +73,15 @@ export async function scrapeMotos(searchQuery: string): Promise<Motorcycle[]> {
 
   try {
     const url = `https://motos.coches.net/segunda-mano/?Text=${encodeURIComponent(searchQuery)}`;
-    await page.goto(url, { waitUntil: 'networkidle' });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
 
-    const cookieButton = await page.locator('button:has-text("Aceptar")').first();
-    if (await cookieButton.isVisible()) {
-      await cookieButton.click();
+    // Handle cookies with timeout
+    try {
+      const cookieButton = page.locator('button:has-text("Aceptar")').first();
+      await cookieButton.click({ timeout: 3000 });
+      await page.waitForTimeout(1000);
+    } catch (e) {
+      console.log('Motos.net: No cookie banner or already accepted');
     }
 
     await page.waitForSelector('.mt-CardAd', { timeout: 10000 });
@@ -85,7 +89,7 @@ export async function scrapeMotos(searchQuery: string): Promise<Motorcycle[]> {
     const motorcycles: Motorcycle[] = await page.evaluate(() => {
       const cards = Array.from(document.querySelectorAll('.mt-CardAd'));
 
-      return cards.map((card, index) => {
+      return cards.slice(0, 20).map((card, index) => {
         const titleEl = card.querySelector('a.mt-CardAd-infoHeaderTitleLink') as HTMLAnchorElement;
         const priceEl = card.querySelector('.mt-CardAdPrice-cashAmount');
         const attrItems = Array.from(card.querySelectorAll('.mt-CardAd-attrItem')).map(li => li.textContent?.trim() || '');
@@ -101,7 +105,9 @@ export async function scrapeMotos(searchQuery: string): Promise<Motorcycle[]> {
         });
 
         const imageEl = card.querySelector('.mt-CardAd-image') as HTMLImageElement;
-        const title = titleEl?.innerText || 'No title';
+        const title = titleEl?.innerText || '';
+        if (!title) return null;
+
         const priceStr = priceEl?.textContent?.trim() || '0';
         const priceValue = parseInt(priceStr.replace(/[^\d]/g, ''), 10) || 0;
 
@@ -125,7 +131,7 @@ export async function scrapeMotos(searchQuery: string): Promise<Motorcycle[]> {
           brand: '', // Will be post-processed
           type: 'Naked' // Will be post-processed
         };
-      });
+      }).filter(item => item !== null) as Motorcycle[];
     });
 
     return motorcycles.map(m => ({
@@ -150,26 +156,39 @@ export async function scrapeWallapop(searchQuery: string): Promise<Motorcycle[]>
 
   try {
     const url = `https://es.wallapop.com/app/search?keywords=${encodeURIComponent(searchQuery)}&category_ids=14000`;
-    await page.goto(url, { waitUntil: 'networkidle' });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
 
-    // Handle cookies
-    const cookieButton = await page.locator('#onetrust-accept-btn-handler').first();
-    if (await cookieButton.isVisible()) {
-      await cookieButton.click();
+    // Handle cookies - try multiple times with timeout
+    try {
+      const cookieButton = page.locator('#onetrust-accept-btn-handler').first();
+      await cookieButton.click({ timeout: 3000 });
+      await page.waitForTimeout(1000);
+    } catch (e) {
+      console.log('Wallapop: No cookie banner or already accepted');
     }
 
-    await page.waitForSelector('wallapop-search-card', { timeout: 10000 });
+    // Wait for content to load - try multiple selectors
+    await page.waitForTimeout(3000);
 
     const motorcycles: Motorcycle[] = await page.evaluate(() => {
-      const cards = Array.from(document.querySelectorAll('wallapop-search-card'));
+      // Try multiple selector strategies
+      let cards = Array.from(document.querySelectorAll('wallapop-search-card'));
 
-      return cards.map((card, index) => {
-        const titleEl = card.querySelector('.ItemCard__title');
-        const priceEl = card.querySelector('.ItemCard__price');
+      // Fallback to other possible selectors
+      if (cards.length === 0) {
+        cards = Array.from(document.querySelectorAll('[data-testid*="search-card"], .card, article'));
+      }
+
+      return cards.slice(0, 20).map((card, index) => {
+        // Try multiple selector patterns for title
+        const titleEl = card.querySelector('.ItemCard__title, h2, h3, [class*="title"]');
+        const priceEl = card.querySelector('.ItemCard__price, [class*="price"]');
         const imageEl = card.querySelector('img') as HTMLImageElement;
         const linkEl = card.querySelector('a') as HTMLAnchorElement;
 
-        const title = titleEl?.textContent?.trim() || 'No title';
+        const title = titleEl?.textContent?.trim() || '';
+        if (!title) return null; // Skip empty cards
+
         const priceStr = priceEl?.textContent?.trim() || '0';
         const priceValue = parseInt(priceStr.replace(/[^\d]/g, ''), 10) || 0;
         const hasTopcase = title.toLowerCase().includes('topcase') ||
@@ -181,7 +200,7 @@ export async function scrapeWallapop(searchQuery: string): Promise<Motorcycle[]>
           title,
           price: priceStr,
           priceValue,
-          year: 'N/A', // Wallapop usually needs deeper inspection for year
+          year: 'N/A',
           km: 'N/A',
           location: 'Varies',
           link: linkEl?.href || '',
@@ -191,7 +210,7 @@ export async function scrapeWallapop(searchQuery: string): Promise<Motorcycle[]>
           brand: '',
           type: 'Naked'
         };
-      });
+      }).filter(item => item !== null) as Motorcycle[];
     });
 
     return motorcycles.map(m => ({
@@ -213,18 +232,22 @@ export async function scrapeEbay(searchQuery: string): Promise<Motorcycle[]> {
 
   try {
     const url = `https://www.ebay.es/sch/i.html?_nkw=${encodeURIComponent(searchQuery)}+moto`;
-    await page.goto(url, { waitUntil: 'networkidle' });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+
+    await page.waitForTimeout(2000);
 
     const motorcycles: Motorcycle[] = await page.evaluate(() => {
       const cards = Array.from(document.querySelectorAll('.s-item'));
 
-      return cards.slice(1).map((card, index) => { // slice(1) to skip eBay's "internal" result
+      return cards.slice(1, 21).map((card, index) => { // slice(1) to skip eBay's "internal" result, limit to 20
         const titleEl = card.querySelector('.s-item__title');
         const priceEl = card.querySelector('.s-item__price');
         const imageEl = card.querySelector('.s-item__image-img') as HTMLImageElement;
         const linkEl = card.querySelector('.s-item__link') as HTMLAnchorElement;
 
-        const title = titleEl?.textContent?.trim() || 'No title';
+        const title = titleEl?.textContent?.trim() || '';
+        if (!title || title === 'Shop on eBay') return null;
+
         const priceStr = priceEl?.textContent?.trim() || '0';
         const priceValue = parseInt(priceStr.replace(/[^\d]/g, ''), 10) || 0;
         const hasTopcase = title.toLowerCase().includes('topcase') ||
@@ -246,7 +269,7 @@ export async function scrapeEbay(searchQuery: string): Promise<Motorcycle[]> {
           brand: '',
           type: 'Naked'
         };
-      });
+      }).filter(item => item !== null) as Motorcycle[];
     });
 
     return motorcycles.map(m => ({
@@ -271,26 +294,37 @@ export async function scrapeMilanuncios(searchQuery: string): Promise<Motorcycle
 
   try {
     const url = `https://www.milanuncios.com/motos-de-segunda-mano/?s=${encodeURIComponent(searchQuery)}`;
-    await page.goto(url, { waitUntil: 'networkidle' });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
 
-    // Cookies
-    const cookieButton = await page.locator('button:has-text("Aceptar")').first();
-    if (await cookieButton.isVisible()) {
-      await cookieButton.click();
+    // Cookies - handle with timeout
+    try {
+      const cookieButton = page.locator('button:has-text("Aceptar")').first();
+      await cookieButton.click({ timeout: 3000 });
+      await page.waitForTimeout(1000);
+    } catch (e) {
+      console.log('Milanuncios: No cookie banner or already accepted');
     }
 
-    await page.waitForSelector('article', { timeout: 10000 });
+    // Wait for content to load
+    await page.waitForTimeout(3000);
 
     const motorcycles: Motorcycle[] = await page.evaluate(() => {
-      const cards = Array.from(document.querySelectorAll('article'));
+      // Try multiple selectors
+      let cards = Array.from(document.querySelectorAll('article'));
 
-      return cards.map((card, index) => {
-        const titleEl = card.querySelector('h2');
-        const priceEl = card.querySelector('.ma-AdCard-price');
+      if (cards.length === 0) {
+        cards = Array.from(document.querySelectorAll('[class*="AdCard"], .card, [data-testid*="ad"]'));
+      }
+
+      return cards.slice(0, 20).map((card, index) => {
+        const titleEl = card.querySelector('h2, h3, [class*="title"]');
+        const priceEl = card.querySelector('.ma-AdCard-price, [class*="price"]');
         const imageEl = card.querySelector('img') as HTMLImageElement;
         const linkEl = card.querySelector('a') as HTMLAnchorElement;
 
-        const title = titleEl?.textContent?.trim() || 'No title';
+        const title = titleEl?.textContent?.trim() || '';
+        if (!title) return null;
+
         const priceStr = priceEl?.textContent?.trim() || '0';
         const priceValue = parseInt(priceStr.replace(/[^\d]/g, ''), 10) || 0;
         const hasTopcase = title.toLowerCase().includes('topcase') ||
@@ -312,7 +346,7 @@ export async function scrapeMilanuncios(searchQuery: string): Promise<Motorcycle
           brand: '',
           type: 'Naked'
         };
-      });
+      }).filter(item => item !== null) as Motorcycle[];
     });
 
     return motorcycles.map(m => ({
@@ -338,30 +372,39 @@ export async function scrapeFacebookMarketplace(searchQuery: string): Promise<Mo
 
   try {
     const url = `https://www.facebook.com/marketplace/category/motorcycles?query=${encodeURIComponent(searchQuery)}`;
-    await page.goto(url, { waitUntil: 'networkidle' });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
 
-    // Close login popup if it appears
-    const closeButton = await page.locator('div[role="button"][aria-label="Cerrar"]').first();
-    if (await closeButton.isVisible()) {
-      await closeButton.click();
-    }
-
-    await page.waitForSelector('div[style*="max-width"]', { timeout: 10000 });
+    // Skip the close button - it's too unreliable
+    // Just wait for content to load
+    await page.waitForTimeout(5000);
 
     const motorcycles: Motorcycle[] = await page.evaluate(() => {
-      // FB Marketplace structure is highly dynamic and uses obfuscated classes.
-      // We look for common patterns in the structure.
-      const productTiles = Array.from(document.querySelectorAll('div[role="main"] div div div div div div div div div div div'));
+      // FB Marketplace structure is highly dynamic
+      // Look for links with marketplace URLs
+      const links = Array.from(document.querySelectorAll('a[href*="/marketplace/item/"]'));
 
-      return productTiles.map((tile, index) => {
-        const textElements = Array.from(tile.querySelectorAll('span'));
-        if (textElements.length < 2) return null;
+      return links.slice(0, 20).map((linkEl, index) => {
+        const link = linkEl as HTMLAnchorElement;
 
-        const priceStr = textElements[0]?.textContent || '0';
-        const title = textElements[1]?.textContent || 'No title';
-        const linkEl = tile.querySelector('a') as HTMLAnchorElement;
-        const imageEl = tile.querySelector('img') as HTMLImageElement;
+        // Try to find text content within or near the link
+        const textElements = Array.from(link.querySelectorAll('span'));
 
+        // Look for price (usually has € or numbers)
+        let priceStr = '0';
+        let title = '';
+
+        for (const span of textElements) {
+          const text = span.textContent?.trim() || '';
+          if (text.includes('€') || /^\d+\s*€/.test(text)) {
+            priceStr = text;
+          } else if (text.length > 5 && !title) {
+            title = text;
+          }
+        }
+
+        if (!title) return null;
+
+        const imageEl = link.querySelector('img') as HTMLImageElement;
         const priceValue = parseInt(priceStr.replace(/[^\d]/g, ''), 10) || 0;
         const hasTopcase = title.toLowerCase().includes('topcase') ||
           title.toLowerCase().includes('maleta') ||
@@ -375,7 +418,7 @@ export async function scrapeFacebookMarketplace(searchQuery: string): Promise<Mo
           year: 'N/A',
           km: 'N/A',
           location: 'Local',
-          link: linkEl ? (linkEl.href.startsWith('http') ? linkEl.href : `https://www.facebook.com${linkEl.getAttribute('href')}`) : '',
+          link: link.href.startsWith('http') ? link.href : `https://www.facebook.com${link.getAttribute('href')}`,
           image: imageEl?.src || '',
           source: 'facebook',
           hasTopcase,
