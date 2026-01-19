@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Motorcycle } from '@/lib/scraper';
+import { Motorcycle } from '@/lib/models/Motorcycle';
 
 export default function Home() {
   const [query, setQuery] = useState('');
