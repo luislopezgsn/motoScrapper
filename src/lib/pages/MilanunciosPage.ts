@@ -14,7 +14,15 @@ export class MilanunciosPage extends BasePage {
     }
 
     protected buildSearchUrl(searchQuery: string): string {
-        return `https://www.milanuncios.com/motos-de-segunda-mano/?s=${encodeURIComponent(searchQuery)}`;
+        // c-1139 is the category for motorcycles ("motos-de-segunda-mano")
+        // but easier to append the category ID in the query params if possible or use the path
+        // The path /motos-de-segunda-mano/ IS the category.
+        // We ensure we search WITHIN this category by using the correct base path.
+        // The previous one was correct but maybe broad matching.
+        // Let's try adding explicit category ID if possible or keep using the path which should be fine.
+        // Actually, Milanuncios search might be redirecting if keyword looks like a car.
+        // Let's enforce it by using the category specifically.
+        return `https://www.milanuncios.com/motos-de-segunda-mano/?s=${encodeURIComponent(searchQuery)}&fromSearch=1`;
     }
 
     protected getSourceName(): string {

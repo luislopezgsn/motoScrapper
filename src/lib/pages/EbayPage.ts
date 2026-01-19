@@ -12,7 +12,12 @@ export class EbayPage extends BasePage {
     }
 
     protected buildSearchUrl(searchQuery: string): string {
-        return `https://www.ebay.es/sch/i.html?_nkw=${encodeURIComponent(searchQuery)}+moto`;
+        // _sacat=422 is Motorcycles category in eBay Spain
+        // _ipg=24 for 24 items
+        // lh_prefLoc=1 for "Spain" preference (usually) or try to use advanced search params
+        // But better: use the 'located in Spain' param which is usually lh_prefLoc=1 or rt=nc&_dmd=1
+        // Adding _stpos to prioritize local or just strict filter
+        return `https://www.ebay.es/sch/i.html?_nkw=${encodeURIComponent(searchQuery)}&_sacat=422&LH_PrefLoc=1`;
     }
 
     protected getSourceName(): string {

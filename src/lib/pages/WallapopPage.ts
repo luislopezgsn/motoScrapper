@@ -14,7 +14,10 @@ export class WallapopPage extends BasePage {
     }
 
     protected buildSearchUrl(searchQuery: string): string {
-        return `https://es.wallapop.com/app/search?keywords=${encodeURIComponent(searchQuery)}&category_ids=14000`;
+        // category_ids=14000 is Motorcycles
+        // object_type_ids=100 might specify private/pro
+        // filters_source=search_box
+        return `https://es.wallapop.com/app/search?keywords=${encodeURIComponent(searchQuery)}&category_ids=14000&filters_source=quick_filters`;
     }
 
     protected getSourceName(): string {
