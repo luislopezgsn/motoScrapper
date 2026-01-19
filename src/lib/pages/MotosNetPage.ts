@@ -48,10 +48,26 @@ export class MotosNetPage extends BasePage {
                 let km = 'N/A';
                 let location = 'N/A';
 
+                // Debug log to see what attributes we are getting
+                // console.log('Attributes:', attrItems);
+
                 attrItems.forEach(attr => {
-                    if (/^\d{4}$/.test(attr)) year = attr;
-                    else if (attr.toLowerCase().includes('km')) km = attr;
-                    else if (attr.length > 3 && !attr.includes('cv') && !attr.includes('garant') && !attr.includes('change')) location = attr;
+                    // Year: 4 digits, usually > 1900
+                    if (/^(19|20)\d{2}$/.test(attr)) {
+                        year = attr;
+                    }
+                    // KM: contains 'km' or looks like a number with dots
+                    else if (attr.toLowerCase().includes('km')) {
+                        km = attr;
+                    }
+                    // Location: Text that is not year, not km, not fuel type
+                    else if (attr.length > 2 && !attr.includes('cv') && !attr.includes('Gasolina')) {
+                        // Sometimes it captures "Manual", "Gasolina", etc.
+                        // Simple heuristic for location: usually a city name, starts with Capital
+                        if (/[A-Z]/.test(attr.charAt(0))) {
+                            location = attr;
+                        }
+                    }
                 });
 
                 const imageEl = card.querySelector('.mt-CardAd-image, img') as HTMLImageElement;
@@ -59,6 +75,8 @@ export class MotosNetPage extends BasePage {
                 if (!title) return null;
 
                 const priceStr = priceEl?.textContent?.trim() || '0';
+                // Handle "Consultar" or non-numeric prices
+                if (priceStr.toLowerCase().includes('consultar')) return null;
                 // Remove non-numeric characters except for possible delimiters if needed, but usually just taking digits works for simple integer prices
                 const priceValue = parseInt(priceStr.replace(/[^\d]/g, ''), 10) || 0;
 

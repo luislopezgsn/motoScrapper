@@ -42,14 +42,28 @@ export abstract class BasePage {
     async scrape(searchQuery: string): Promise<Motorcycle[]> {
         try {
             const url = this.buildSearchUrl(searchQuery);
-            await this.page!.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+            // Increased timeout for slower connections/sites
+            await this.page!.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
             await this.handleCookies();
             await this.waitForContent();
 
-            const motorcycles = await this.extractMotorcycles();
+            let motorcycles = await this.extractMotorcycles();
 
-            // Post-process: add brand and type detection
+            // 1. Filter by Search Query Relevance
+            // Split query into terms (ignore small words)
+            const searchTerms = searchQuery.toLowerCase().split(/\s+/).filter(t => t.length > 2);
+
+            if (searchTerms.length > 0) {
+                motorcycles = motorcycles.filter(moto => {
+                    const titleLower = moto.title.toLowerCase();
+                    // Require at least ALL significant terms to be somewhat present
+                    // To be safer with "CB500" vs "CB 500", we can be slightly lenient, but for "Honda" query we must have "Honda"
+                    return searchTerms.every(term => titleLower.includes(term));
+                });
+            }
+
+            // 2. Post-process: add brand and type detection
             return motorcycles.map(m => ({
                 ...m,
                 brand: detectBrand(m.title),
