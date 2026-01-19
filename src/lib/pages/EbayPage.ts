@@ -34,17 +34,25 @@ export class EbayPage extends BasePage {
             return cards.slice(1, 21).map((card, index) => { // slice(1) to skip eBay's "internal" result, limit to 20
                 const titleEl = card.querySelector('.s-item__title');
                 const priceEl = card.querySelector('.s-item__price');
-                const imageEl = card.querySelector('.s-item__image-img') as HTMLImageElement;
+                const imageEl = card.querySelector('.s-item__image-img, img') as HTMLImageElement;
                 const linkEl = card.querySelector('.s-item__link') as HTMLAnchorElement;
+
+                // eBay sometimes has location in .s-item__location
+                const locationEl = card.querySelector('.s-item__location');
 
                 const title = titleEl?.textContent?.trim() || '';
                 if (!title || title === 'Shop on eBay') return null;
 
                 const priceStr = priceEl?.textContent?.trim() || '0';
                 const priceValue = parseInt(priceStr.replace(/[^\d]/g, ''), 10) || 0;
+
                 const hasTopcase = title.toLowerCase().includes('topcase') ||
                     title.toLowerCase().includes('maleta') ||
-                    title.toLowerCase().includes('baul');
+                    title.toLowerCase().includes('baul') ||
+                    title.toLowerCase().includes('cofre');
+
+                // Image handling
+                const imageUrl = imageEl?.src || imageEl?.dataset.src || '';
 
                 return {
                     id: `ebay-${index}-${Date.now()}`,
@@ -53,9 +61,9 @@ export class EbayPage extends BasePage {
                     priceValue,
                     year: 'N/A',
                     km: 'N/A',
-                    location: 'Spain',
+                    location: locationEl?.textContent?.replace('from ', '').trim() || 'Spain',
                     link: linkEl?.href || '',
-                    image: imageEl?.src || '',
+                    image: imageUrl,
                     source: 'ebay',
                     hasTopcase,
                     brand: '',
